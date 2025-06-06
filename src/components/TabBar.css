@@ -34,6 +34,7 @@
 }
 
 .tab-close-btn {
+  visibility: hidden;
   width: 20px;
   height: 20px;
   max-width: 20px;
@@ -50,8 +51,15 @@
   color: inherit;
   font-size: 0.8em;
   cursor: pointer;
-  transition: background 0.2s;
   border-radius: 50%;
+}
+
+.tab-active .tab-close-btn {
+  visibility: visible;
+}
+
+.tab:hover .tab-close-btn {
+  visibility: visible;
 }
 
 .tab-close-btn:hover {
@@ -64,14 +72,24 @@
 }
 
 .new-tab-btn {
-  flex: 1;
-  height: 100%;
-  min-width: 50px;
-  max-width: 200px;
-  height: calc(var(--tabs-height) - var(--tabs-active-border-width));
+  width: calc(var(--tabs-height) * 1.5);
+  height: var(--tabs-height);
+
+  background: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  border-right: 2px solid rgba(0, 0, 0, 0.5);
+  border: none;
+  font-size: 1.2em;
+  margin: 0;
+  padding: 0;
+}
+
+.new-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.new-tab-btn:focus {
+  outline: none;
+  box-shadow: none;
 }
