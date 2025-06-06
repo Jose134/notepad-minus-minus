@@ -21,7 +21,7 @@ function App() {
 
   useEffect(() => {
     if (!window.electron) return;
-    const { onNewFile, onOpenFile, onCloseCurrentTab, onGetActiveTab, onGetAllTabs, clearCallbacks } = window.electron;
+    const { onNewFile, onOpenFile, onCloseCurrentTab, onGetActiveTab, onGetAllTabs, onTabUpdated, onAllTabsUpdated, clearCallbacks } = window.electron;
 
     onNewFile(() => {
       createNewTab();
@@ -50,6 +50,21 @@ function App() {
     onGetAllTabs(() => {
       return appStateRef.current.tabs;
     })
+
+    onTabUpdated((tab) => {
+      const updatedTabs = appStateRef.current.tabs.map(t =>
+        t.id === tab.id ? { ...t, ...tab } : t
+      );
+      const newActiveTabId = updatedTabs.find(t => t.id === appStateRef.current.activeTabId)?.id || updatedTabs[0]?.id || null;
+      setAppState(prev => ({ ...prev, activeTabId: newActiveTabId, tabs: updatedTabs }));
+    });
+
+    onAllTabsUpdated((tabs) => {
+      setAppState(prev => {
+        const newActiveTabId = tabs.find(tab => tab.id === prev.activeTabId)?.id || tabs[0]?.id || null;
+        return { ...prev, activeTabId: newActiveTabId, tabs };
+      });
+    });
 
     return () => {
       clearCallbacks();
@@ -104,17 +119,17 @@ function App() {
           appState.tabs.length === 0
             ? <WelcomeScreen onCreateNew={createNewTab} />
             : <Editor
-                theme="vs-dark"
-                onChange={onChange}
-                language="plaintext"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 16,
-                }}
-                value={
-                  appState.tabs.find(tab => tab.id === appState.activeTabId)?.content || ''
-                }
-              />
+              theme="vs-dark"
+              onChange={onChange}
+              language="plaintext"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 16,
+              }}
+              value={
+                appState.tabs.find(tab => tab.id === appState.activeTabId)?.content || ''
+              }
+            />
         }
       </div>
     </>

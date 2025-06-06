@@ -8,6 +8,8 @@ export interface IElectronAPI {
   onCloseCurrentTab: (callback: () => void) => void,
   onGetActiveTab: (callback: () => Tab | null) => void,
   onGetAllTabs: (callback: () => Tab[]) => void,
+  onTabUpdated: (callback: (tab: Tab) => void) => void,
+  onAllTabsUpdated: (callback: (tabs: Tab[]) => void) => void,
   clearCallbacks: () => void,
 }
 
@@ -37,6 +39,16 @@ const exposedAPI: IElectronAPI = {
     ipcRenderer.on(Messages.GET_ALL_TABS, async () => {
       const allTabs = getter();
       ipcRenderer.send(Messages.GET_ALL_TABS, allTabs);
+    });
+  },
+  onTabUpdated: (callback) => {
+    ipcRenderer.on(Messages.TAB_UPDATED, (_event, tab: Tab) => {
+      callback(tab);
+    });
+  },
+  onAllTabsUpdated: (callback) => {
+    ipcRenderer.on(Messages.ALL_TABS_UPDATED, (_event, tabs: Tab[]) => {
+      callback(tabs);
     });
   },
   clearCallbacks: () => {

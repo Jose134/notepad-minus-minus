@@ -9,6 +9,8 @@ var Messages = /* @__PURE__ */ ((Messages2) => {
   Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
   Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
   Messages2["GET_ALL_TABS"] = "get-all-tabs";
+  Messages2["TAB_UPDATED"] = "tab-updated";
+  Messages2["ALL_TABS_UPDATED"] = "all-tabs-updated";
   return Messages2;
 })(Messages || {});
 const require2 = createRequire(import.meta.url);
@@ -126,10 +128,16 @@ const saveFile = (win2) => {
   };
   getActiveTab(win2, async (tab) => {
     if (tab) {
-      const path2 = tab.path ?? await saveDialog();
-      if (path2) {
+      const filePath = tab.path ?? await saveDialog();
+      if (filePath) {
         const fs = require2("fs");
-        fs.writeFileSync(path2, tab.content ?? "", "utf-8");
+        fs.writeFileSync(filePath, tab.content ?? "", "utf-8");
+        tab.name = path.basename(filePath) || "New File";
+        tab.dirty = false;
+        tab.path = filePath;
+        win2.webContents.send(Messages.TAB_UPDATED, {
+          ...tab
+        });
       }
     } else {
       console.error("No active tab found");

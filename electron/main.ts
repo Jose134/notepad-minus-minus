@@ -152,10 +152,17 @@ const saveFile = (win: BrowserWindow) => {
 
   getActiveTab(win, async (tab: Tab | null) => {
     if (tab) {
-      const path = tab.path ?? await saveDialog();
-      if (path) {
+      const filePath = tab.path ?? await saveDialog();
+      if (filePath) {
         const fs = require('fs');
-        fs.writeFileSync(path, tab.content ?? '', 'utf-8');
+        fs.writeFileSync(filePath, tab.content ?? '', 'utf-8');
+
+        tab.name = path.basename(filePath) || 'New File';
+        tab.dirty = false;
+        tab.path = filePath;
+        win.webContents.send(Messages.TAB_UPDATED, {
+          ...tab,
+        });
       }      
     } else {
       console.error('No active tab found');

@@ -7,6 +7,8 @@ var Messages = /* @__PURE__ */ ((Messages2) => {
   Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
   Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
   Messages2["GET_ALL_TABS"] = "get-all-tabs";
+  Messages2["TAB_UPDATED"] = "tab-updated";
+  Messages2["ALL_TABS_UPDATED"] = "all-tabs-updated";
   return Messages2;
 })(Messages || {});
 const exposedAPI = {
@@ -35,6 +37,16 @@ const exposedAPI = {
     electron.ipcRenderer.on(Messages.GET_ALL_TABS, async () => {
       const allTabs = getter();
       electron.ipcRenderer.send(Messages.GET_ALL_TABS, allTabs);
+    });
+  },
+  onTabUpdated: (callback) => {
+    electron.ipcRenderer.on(Messages.TAB_UPDATED, (_event, tab) => {
+      callback(tab);
+    });
+  },
+  onAllTabsUpdated: (callback) => {
+    electron.ipcRenderer.on(Messages.ALL_TABS_UPDATED, (_event, tabs) => {
+      callback(tabs);
     });
   },
   clearCallbacks: () => {
