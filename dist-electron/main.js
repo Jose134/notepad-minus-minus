@@ -1,7 +1,16 @@
-import { app, BrowserWindow, Menu, dialog } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+var Messages = /* @__PURE__ */ ((Messages2) => {
+  Messages2["NEW_FILE"] = "new-file";
+  Messages2["OPEN_FILE"] = "open-file";
+  Messages2["SAVE_FILE"] = "save-file";
+  Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
+  Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
+  Messages2["GET_ALL_TABS"] = "get-all-tabs";
+  return Messages2;
+})(Messages || {});
 const require2 = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -13,6 +22,7 @@ let win;
 function createWindow() {
   console.log(path.join(__dirname, "preload.mjs"));
   win = new BrowserWindow({
+    title: "Notepad--",
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
@@ -38,23 +48,30 @@ function createMenu(win2) {
       submenu: [
         {
           label: "New File",
-          accelerator: "Ctrl+N",
+          accelerator: "CommandOrControl+N",
           click: () => {
-            win2.webContents.send("menu-new");
+            win2.webContents.send(Messages.NEW_FILE);
           }
         },
         {
           label: "Open...",
-          accelerator: "Ctrl+O",
+          accelerator: "CommandOrControl+O",
           click: () => {
             openFile(win2);
           }
         },
         {
           label: "Save",
-          accelerator: "Ctrl+S",
+          accelerator: "CommandOrControl+S",
           click: () => {
-            win2.webContents.send("menu-save");
+            saveFile(win2);
+          }
+        },
+        {
+          label: "Close Current Tab",
+          accelerator: "CommandOrControl+W",
+          click: () => {
+            win2.webContents.send(Messages.CLOSE_CURRENT_TAB);
           }
         },
         {
@@ -82,6 +99,12 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(createWindow);
+const getActiveTab = (win2, callback) => {
+  ipcMain.once(Messages.GET_ACTIVE_TAB, (_event, tab) => {
+    callback(tab);
+  });
+  win2.webContents.send(Messages.GET_ACTIVE_TAB);
+};
 const openFile = (win2) => {
   const openDialog = async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ["openFile"] });
@@ -91,7 +114,26 @@ const openFile = (win2) => {
     return { path: filePaths[0], content };
   };
   openDialog().then((result) => {
-    win2.webContents.send("open-file", result == null ? void 0 : result.path, result == null ? void 0 : result.content);
+    win2.webContents.send(Messages.OPEN_FILE, result == null ? void 0 : result.path, result == null ? void 0 : result.content);
+  });
+};
+const saveFile = (win2) => {
+  const saveDialog = async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog({});
+    console.log(canceled, filePath);
+    if (canceled || !filePath) return null;
+    return filePath;
+  };
+  getActiveTab(win2, async (tab) => {
+    if (tab) {
+      const path2 = tab.path ?? await saveDialog();
+      if (path2) {
+        const fs = require2("fs");
+        fs.writeFileSync(path2, tab.content ?? "", "utf-8");
+      }
+    } else {
+      console.error("No active tab found");
+    }
   });
 };
 export {

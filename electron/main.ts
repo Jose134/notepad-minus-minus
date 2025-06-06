@@ -1,7 +1,9 @@
-import { app, BrowserWindow, Menu, dialog } from 'electron'
+import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import Messages from './messages'
+import Tab from '../src/models/Tab'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -29,6 +31,7 @@ let win: BrowserWindow | null
 function createWindow() {
   console.log(path.join(__dirname, 'preload.mjs'));
   win = new BrowserWindow({
+    title: 'Notepad--',
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -60,18 +63,23 @@ function createMenu(win: BrowserWindow) {
       submenu: [
         {
           label: 'New File',
-          accelerator: 'Ctrl+N',
-          click: () => { win.webContents.send('menu-new'); }
+          accelerator: 'CommandOrControl+N',
+          click: () => { win.webContents.send(Messages.NEW_FILE); }
         },
         {
           label: 'Open...',
-          accelerator: 'Ctrl+O',
+          accelerator: 'CommandOrControl+O',
           click: () => { openFile(win); }
         },
         {
           label: 'Save',
-          accelerator: 'Ctrl+S',
-          click: () => { win.webContents.send('menu-save'); }
+          accelerator: 'CommandOrControl+S',
+          click: () => { saveFile(win); }
+        },
+        {
+          label: 'Close Current Tab',
+          accelerator: 'CommandOrControl+W',
+          click: () => { win.webContents.send(Messages.CLOSE_CURRENT_TAB); }
         },
         {
           label: 'Exit',
@@ -107,21 +115,19 @@ app.on('activate', () => {
 
 app.whenReady().then(createWindow)
 
-// ipcMain.handle('show-open-dialog', async () => {
-//   const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openFile'] });
-//   if (canceled || filePaths.length === 0) return null;
-//   const fs = require('fs');
-//   const content = fs.readFileSync(filePaths[0], 'utf-8');
-//   return { path: filePaths[0], content };
-// });
+const getAllTabs = (win: BrowserWindow, callback: (tabs: Tab[]) => void) => {
+  ipcMain.once(Messages.GET_ALL_TABS, (_event, tabs: Tab[]) => {
+    callback(tabs);
+  });
+  win.webContents.send(Messages.GET_ALL_TABS);
+}
 
-// ipcMain.handle('show-save-dialog', async (event, { content }) => {
-//   const { canceled, filePath } = await dialog.showSaveDialog({});
-//   if (canceled || !filePath) return null;
-//   const fs = require('fs');
-//   fs.writeFileSync(filePath, content, 'utf-8');
-//   return { path: filePath };
-// });
+const getActiveTab = (win: BrowserWindow, callback: (tab: Tab | null) => void) => {
+  ipcMain.once(Messages.GET_ACTIVE_TAB, (_event, tab: Tab | null) => {
+    callback(tab);
+  });
+  win.webContents.send(Messages.GET_ACTIVE_TAB);
+}
 
 const openFile = (win: BrowserWindow) => {
   const openDialog = async () => {
@@ -132,6 +138,27 @@ const openFile = (win: BrowserWindow) => {
     return { path: filePaths[0], content };
   };
   openDialog().then(result => {
-    win.webContents.send('open-file', result?.path, result?.content);
+    win.webContents.send(Messages.OPEN_FILE, result?.path, result?.content);
+  });
+}
+
+const saveFile = (win: BrowserWindow) => {
+  const saveDialog = async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog({});
+    console.log(canceled, filePath);
+    if (canceled || !filePath) return null;
+    return filePath;
+  };
+
+  getActiveTab(win, async (tab: Tab | null) => {
+    if (tab) {
+      const path = tab.path ?? await saveDialog();
+      if (path) {
+        const fs = require('fs');
+        fs.writeFileSync(path, tab.content ?? '', 'utf-8');
+      }      
+    } else {
+      console.error('No active tab found');
+    }
   });
 }

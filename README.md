@@ -1,6 +1,6 @@
 # Notepad--
 
-This program aims to be a dead simple note taking application, powered by VSCode's editor and implementing the features that matters
+This program aims to be a dead simple note taking application, powered by VSCode's editor and implementing the features that matters.
 
 What's planned:
 - Multiplatform support

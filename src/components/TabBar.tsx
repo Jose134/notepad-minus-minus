@@ -1,12 +1,6 @@
+import Tab from '../models/Tab';
 import './TabBar.css'
 import { IoAdd, IoClose, IoAlert } from 'react-icons/io5';
-
-type Tab = {
-  id: string;
-  name: string;
-  dirty?: boolean;
-  content?: string;
-}
 
 type TabBarProps = {
   tabs: Tab[];
@@ -49,8 +43,4 @@ const TabBar = ({ tabs, activeTabId, onTabSelect, onNewTab, onTabClose }: TabBar
   );
 }
 
-export {
-  TabBar,
-  type Tab,
-  type TabBarProps
-}
+export default TabBar;
