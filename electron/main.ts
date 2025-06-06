@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, Dialog } from 'electron'
+import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -25,7 +25,10 @@ process.env.APP_ROOT = path.join(__dirname, '..')
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
-export const APP_STATE_FILE_PATH = path.join(process.env.APP_ROOT, 'appState')
+
+const APP_STATE_FILE_PATH_DIR = path.join(path.dirname(app.getPath('userData')), 'Notepad--')
+const APP_STATE_FILE_PATH = path.join(APP_STATE_FILE_PATH_DIR, 'appState')
+console.log('APP_STATE_FILE_PATH:', APP_STATE_FILE_PATH);
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
@@ -55,7 +58,6 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 
-  win.webContents.openDevTools();
   createMenu(win);
 
   win.on('ready-to-show', () => {
@@ -117,6 +119,20 @@ function createMenu(win: BrowserWindow) {
           label: 'Exit',
           accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
           click: () => { app.quit(); }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Show DevTools',
+          accelerator: 'F12',
+          click: () => {
+            if (win) {
+              win.webContents.toggleDevTools();
+            }
+          }
         }
       ]
     }
@@ -195,6 +211,11 @@ const getActiveTab = (win: BrowserWindow, callback: (tab: Tab | null) => void) =
 
 const preserveState = async (win: BrowserWindow) => {
   return new Promise<void>((resolve, reject) => {
+    // Create the directory if it doesn't exist
+    if (!fs.existsSync(APP_STATE_FILE_PATH_DIR)) {
+      fs.mkdirSync(APP_STATE_FILE_PATH_DIR, { recursive: true });
+    }
+
     getAppState(win, (appState: AppState) => {
       const comrpessedState = require('lz-string').compressToUTF16(JSON.stringify(appState));
       fs.writeFile(APP_STATE_FILE_PATH, comrpessedState, 'utf-16le', (err) => {
