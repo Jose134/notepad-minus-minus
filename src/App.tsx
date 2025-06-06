@@ -4,12 +4,7 @@ import TabBar from './components/TabBar'
 import WelcomeScreen from './components/WelcomeScreen'
 import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import Tab from './models/Tab'
-
-type AppState = {
-  tabs: Tab[];
-  activeTabId: string | null;
-}
+import AppState from './models/AppState'
 
 function App() {
   const [appState, setAppState] = useState<AppState>({ tabs: [], activeTabId: null });
@@ -21,13 +16,12 @@ function App() {
 
   useEffect(() => {
     if (!window.electron) return;
-    const { onNewFile, onOpenFile, onCloseCurrentTab, onGetActiveTab, onGetAllTabs, onTabUpdated, onAllTabsUpdated, clearCallbacks } = window.electron;
 
-    onNewFile(() => {
+    window.electron.onNewFile(() => {
       createNewTab();
     });
 
-    onOpenFile((filePath, content) => {
+    window.electron.onOpenFile((filePath, content) => {
       const newTabId = uuidv4();
       const tabName = filePath.split(/\\|\//).pop() || 'Untitled';
       setAppState(prev => ({
@@ -37,21 +31,21 @@ function App() {
       }));
     });
 
-    onCloseCurrentTab(() => {
+    window.electron.onCloseCurrentTab(() => {
       if (appStateRef.current.activeTabId) {
         closeTab(appStateRef.current.activeTabId);
       }
     })
 
-    onGetActiveTab(() => {
+    window.electron.onGetActiveTab(() => {
       return appStateRef.current.tabs.find(tab => tab.id === appStateRef.current.activeTabId) ?? null;
     });
 
-    onGetAllTabs(() => {
-      return appStateRef.current.tabs;
+    window.electron.onGetAppState(() => {
+      return appStateRef.current;
     })
 
-    onTabUpdated((tab) => {
+    window.electron.onTabUpdated((tab) => {
       const updatedTabs = appStateRef.current.tabs.map(t =>
         t.id === tab.id ? { ...t, ...tab } : t
       );
@@ -59,15 +53,12 @@ function App() {
       setAppState(prev => ({ ...prev, activeTabId: newActiveTabId, tabs: updatedTabs }));
     });
 
-    onAllTabsUpdated((tabs) => {
-      setAppState(prev => {
-        const newActiveTabId = tabs.find(tab => tab.id === prev.activeTabId)?.id || tabs[0]?.id || null;
-        return { ...prev, activeTabId: newActiveTabId, tabs };
-      });
+    window.electron.onAppStateUpdated((appState) => {
+      setAppState(appState);
     });
 
     return () => {
-      clearCallbacks();
+      window.electron.clearCallbacks();
     }
 
   }, []);
@@ -94,7 +85,7 @@ function App() {
     }));
   }
 
-  const onChange = (value: string | undefined) => {
+  const onEditorChange = (value: string | undefined) => {
     if (!appState.activeTabId) return;
     const updatedTab = appState.tabs.find(tab => tab.id === appState.activeTabId);
     if (!updatedTab) return;
@@ -120,7 +111,7 @@ function App() {
             ? <WelcomeScreen onCreateNew={createNewTab} />
             : <Editor
               theme="vs-dark"
-              onChange={onChange}
+              onChange={onEditorChange}
               language="plaintext"
               options={{
                 minimap: { enabled: false },
@@ -136,4 +127,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

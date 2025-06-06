@@ -5,10 +5,10 @@ enum Messages {
   CLOSE_CURRENT_TAB = 'close-current-tab',
 
   GET_ACTIVE_TAB = 'get-active-tab',
-  GET_ALL_TABS = 'get-all-tabs',
+  GET_APP_STATE = 'get-app-state',
 
   TAB_UPDATED = 'tab-updated',
-  ALL_TABS_UPDATED = 'all-tabs-updated',
+  APP_STATE_UPDATED = 'app-state-updated',
 }
 
 export default Messages;

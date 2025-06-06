@@ -1,15 +1,16 @@
 import { ipcRenderer, contextBridge } from 'electron'
 import Messages from './messages';
 import Tab from '../src/models/Tab';
+import AppState from '../src/models/AppState';
 
 export interface IElectronAPI {
   onNewFile: (callback: () => void) => void,
   onOpenFile: (callback: (filePath: string, content: string) => void) => void,
   onCloseCurrentTab: (callback: () => void) => void,
   onGetActiveTab: (callback: () => Tab | null) => void,
-  onGetAllTabs: (callback: () => Tab[]) => void,
+  onGetAppState: (callback: () => AppState) => void,
   onTabUpdated: (callback: (tab: Tab) => void) => void,
-  onAllTabsUpdated: (callback: (tabs: Tab[]) => void) => void,
+  onAppStateUpdated: (callback: (appState: AppState) => void) => void,
   clearCallbacks: () => void,
 }
 
@@ -35,10 +36,10 @@ const exposedAPI: IElectronAPI = {
       ipcRenderer.send(Messages.GET_ACTIVE_TAB, activeTab);
     });
   },
-  onGetAllTabs: (getter) => {
-    ipcRenderer.on(Messages.GET_ALL_TABS, async () => {
-      const allTabs = getter();
-      ipcRenderer.send(Messages.GET_ALL_TABS, allTabs);
+  onGetAppState: (getter) => {
+    ipcRenderer.on(Messages.GET_APP_STATE, async () => {
+      const appState = getter();
+      ipcRenderer.send(Messages.GET_APP_STATE, appState);
     });
   },
   onTabUpdated: (callback) => {
@@ -46,9 +47,9 @@ const exposedAPI: IElectronAPI = {
       callback(tab);
     });
   },
-  onAllTabsUpdated: (callback) => {
-    ipcRenderer.on(Messages.ALL_TABS_UPDATED, (_event, tabs: Tab[]) => {
-      callback(tabs);
+  onAppStateUpdated: (callback) => {
+    ipcRenderer.on(Messages.APP_STATE_UPDATED, (_event, appState: AppState) => {
+      callback(appState);
     });
   },
   clearCallbacks: () => {
