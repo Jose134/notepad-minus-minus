@@ -44,11 +44,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-  })
-
-  // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
+    backgroundColor: '#242424',
+    show: false,
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -61,8 +58,8 @@ function createWindow() {
   createMenu(win);
 
   win.on('ready-to-show', () => {
-    console.log('Window is ready to show');
     if (win) {
+      win.show();
       restoreState(win).catch((err) => {
         console.error('Failed to restore state:', err);
       });

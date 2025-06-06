@@ -1,46 +1,76 @@
-import { app as T, BrowserWindow as u, ipcMain as m, dialog as f, Menu as S } from "electron";
-import { createRequire as h } from "node:module";
-import { fileURLToPath as b } from "node:url";
-import r from "node:path";
-import i from "node:fs";
-var c = /* @__PURE__ */ ((e) => (e.NEW_FILE = "new-file", e.OPEN_FILE = "open-file", e.SAVE_FILE = "save-file", e.CLOSE_CURRENT_TAB = "close-current-tab", e.GET_ACTIVE_TAB = "get-active-tab", e.GET_APP_STATE = "get-app-state", e.TAB_UPDATED = "tab-updated", e.APP_STATE_UPDATED = "app-state-updated", e.ASK_SAVE_TAB = "ask-save-tab", e))(c || {});
-const P = h(import.meta.url), _ = r.dirname(b(import.meta.url));
-process.env.APP_ROOT = r.join(_, "..");
-const A = process.env.VITE_DEV_SERVER_URL, j = r.join(process.env.APP_ROOT, "dist-electron"), v = r.join(process.env.APP_ROOT, "dist"), E = r.join(r.dirname(T.getPath("userData")), "Notepad--"), d = r.join(E, "appState");
-console.log("APP_STATE_FILE_PATH:", d);
-process.env.VITE_PUBLIC = A ? r.join(process.env.APP_ROOT, "public") : v;
-let n;
-function C() {
-  console.log(r.join(_, "preload.mjs")), n = new u({
+import { app, BrowserWindow, ipcMain, dialog, Menu } from "electron";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import fs from "node:fs";
+var Messages = /* @__PURE__ */ ((Messages2) => {
+  Messages2["NEW_FILE"] = "new-file";
+  Messages2["OPEN_FILE"] = "open-file";
+  Messages2["SAVE_FILE"] = "save-file";
+  Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
+  Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
+  Messages2["GET_APP_STATE"] = "get-app-state";
+  Messages2["TAB_UPDATED"] = "tab-updated";
+  Messages2["APP_STATE_UPDATED"] = "app-state-updated";
+  Messages2["ASK_SAVE_TAB"] = "ask-save-tab";
+  return Messages2;
+})(Messages || {});
+const require2 = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+const APP_STATE_FILE_PATH_DIR = path.join(path.dirname(app.getPath("userData")), "Notepad--");
+const APP_STATE_FILE_PATH = path.join(APP_STATE_FILE_PATH_DIR, "appState");
+console.log("APP_STATE_FILE_PATH:", APP_STATE_FILE_PATH);
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  console.log(path.join(__dirname, "preload.mjs"));
+  win = new BrowserWindow({
     title: "Notepad--",
-    icon: r.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: r.join(_, "preload.mjs"),
-      contextIsolation: !0,
-      nodeIntegration: !1
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    backgroundColor: "#242424",
+    show: false
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
+  createMenu(win);
+  win.on("ready-to-show", () => {
+    if (win) {
+      win.show();
+      restoreState(win).catch((err) => {
+        console.error("Failed to restore state:", err);
+      });
     }
-  }), n.webContents.on("did-finish-load", () => {
-    n == null || n.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), A ? n.loadURL(A) : n.loadFile(r.join(v, "index.html")), F(n), n.on("ready-to-show", () => {
-    console.log("Window is ready to show"), n && y(n).catch((e) => {
-      console.error("Failed to restore state:", e);
-    });
-  }), n.on("close", (e) => {
-    if (n) {
-      e.preventDefault();
-      const t = () => {
-        n == null || n.removeAllListeners("close"), n == null || n.close();
+  });
+  win.on("close", (event) => {
+    if (win) {
+      event.preventDefault();
+      const closeWindow = () => {
+        win == null ? void 0 : win.removeAllListeners("close");
+        win == null ? void 0 : win.close();
       };
-      O(n).then(() => {
-        t();
-      }).catch((o) => {
-        console.error("Failed to preserve state:", o), t();
+      preserveState(win).then(() => {
+        closeWindow();
+      }).catch((err) => {
+        console.error("Failed to preserve state:", err);
+        closeWindow();
       });
     }
   });
 }
-function F(e) {
-  const t = [
+function createMenu(win2) {
+  const template = [
     {
       label: "File",
       submenu: [
@@ -48,35 +78,35 @@ function F(e) {
           label: "New File",
           accelerator: "CommandOrControl+N",
           click: () => {
-            e.webContents.send(c.NEW_FILE);
+            win2.webContents.send(Messages.NEW_FILE);
           }
         },
         {
           label: "Open...",
           accelerator: "CommandOrControl+O",
           click: () => {
-            g(e);
+            openFile(win2);
           }
         },
         {
           label: "Save",
           accelerator: "CommandOrControl+S",
           click: () => {
-            L(e);
+            saveActiveTab(win2);
           }
         },
         {
           label: "Close Current Tab",
           accelerator: "CommandOrControl+W",
           click: () => {
-            e.webContents.send(c.CLOSE_CURRENT_TAB);
+            win2.webContents.send(Messages.CLOSE_CURRENT_TAB);
           }
         },
         {
           label: "Exit",
           accelerator: process.platform === "darwin" ? "Cmd+Q" : "Alt+F4",
           click: () => {
-            T.quit();
+            app.quit();
           }
         }
       ]
@@ -88,106 +118,159 @@ function F(e) {
           label: "Show DevTools",
           accelerator: "F12",
           click: () => {
-            e && e.webContents.toggleDevTools();
+            if (win2) {
+              win2.webContents.toggleDevTools();
+            }
           }
         }
       ]
     }
-  ], o = S.buildFromTemplate(t);
-  S.setApplicationMenu(o);
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
-T.on("window-all-closed", () => {
-  process.platform !== "darwin" && (T.quit(), n = null);
-});
-T.on("activate", () => {
-  u.getAllWindows().length === 0 && C();
-});
-T.whenReady().then(C);
-m.on(c.ASK_SAVE_TAB, async (e, t) => {
-  let o;
-  ((a) => {
-    a[a.SAVE = 0] = "SAVE", a[a.DONT_SAVE = 1] = "DONT_SAVE", a[a.CANCEL = 2] = "CANCEL";
-  })(o || (o = {}));
-  const s = async () => (await f.showMessageBox({
-    type: "info",
-    noLink: !0,
-    buttons: ["Save", "Don't Save", "Cancel"],
-    title: "Unsaved Changes",
-    message: `The tab "${t.name}" has unsaved changes. Do you want to save it?`
-  })).response;
-  if (n) {
-    const a = await s();
-    if (a === 0) {
-      const l = await w(n, t);
-      n.webContents.send(c.ASK_SAVE_TAB, !l);
-    } else
-      n.webContents.send(
-        c.ASK_SAVE_TAB,
-        a === 2
-        /* CANCEL */
-      );
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
   }
 });
-const D = (e, t) => {
-  m.once(c.GET_APP_STATE, (o, s) => {
-    t(s);
-  }), e.webContents.send(c.GET_APP_STATE);
-}, I = (e, t) => {
-  m.once(c.GET_ACTIVE_TAB, (o, s) => {
-    t(s);
-  }), e.webContents.send(c.GET_ACTIVE_TAB);
-}, O = async (e) => new Promise((t, o) => {
-  i.existsSync(E) || i.mkdirSync(E, { recursive: !0 }), D(e, (s) => {
-    const a = P("lz-string").compressToUTF16(JSON.stringify(s));
-    i.writeFile(d, a, "utf-16le", (l) => {
-      l ? o(l) : t();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+app.whenReady().then(createWindow);
+ipcMain.on(Messages.ASK_SAVE_TAB, async (_event, tab) => {
+  let DialogResponse;
+  ((DialogResponse2) => {
+    DialogResponse2[DialogResponse2["SAVE"] = 0] = "SAVE";
+    DialogResponse2[DialogResponse2["DONT_SAVE"] = 1] = "DONT_SAVE";
+    DialogResponse2[DialogResponse2["CANCEL"] = 2] = "CANCEL";
+  })(DialogResponse || (DialogResponse = {}));
+  const showConfirmDialog = async () => {
+    const result = await dialog.showMessageBox({
+      type: "info",
+      noLink: true,
+      buttons: ["Save", "Don't Save", "Cancel"],
+      title: "Unsaved Changes",
+      message: `The tab "${tab.name}" has unsaved changes. Do you want to save it?`
+    });
+    return result.response;
+  };
+  if (win) {
+    const dialogResponse = await showConfirmDialog();
+    if (dialogResponse === 0) {
+      const saved = await saveTabToFile(win, tab);
+      win.webContents.send(Messages.ASK_SAVE_TAB, !saved);
+    } else {
+      win.webContents.send(
+        Messages.ASK_SAVE_TAB,
+        dialogResponse === 2
+        /* CANCEL */
+      );
+    }
+  }
+});
+const getAppState = (win2, callback) => {
+  ipcMain.once(Messages.GET_APP_STATE, (_event, appState) => {
+    callback(appState);
+  });
+  win2.webContents.send(Messages.GET_APP_STATE);
+};
+const getActiveTab = (win2, callback) => {
+  ipcMain.once(Messages.GET_ACTIVE_TAB, (_event, tab) => {
+    callback(tab);
+  });
+  win2.webContents.send(Messages.GET_ACTIVE_TAB);
+};
+const preserveState = async (win2) => {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(APP_STATE_FILE_PATH_DIR)) {
+      fs.mkdirSync(APP_STATE_FILE_PATH_DIR, { recursive: true });
+    }
+    getAppState(win2, (appState) => {
+      const comrpessedState = require2("lz-string").compressToUTF16(JSON.stringify(appState));
+      fs.writeFile(APP_STATE_FILE_PATH, comrpessedState, "utf-16le", (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
   });
-}), y = async (e) => new Promise((t, o) => {
-  i.existsSync(d) ? i.readFile(d, "utf-16le", (s, a) => {
-    if (s)
-      o(s);
-    else {
-      const l = P("lz-string").decompressFromUTF16(a);
-      try {
-        const p = JSON.parse(l);
-        e.webContents.send(c.APP_STATE_UPDATED, p), t();
-      } catch (p) {
-        o(p);
-      }
+};
+const restoreState = async (win2) => {
+  return new Promise((resolve, reject) => {
+    if (fs.existsSync(APP_STATE_FILE_PATH)) {
+      fs.readFile(APP_STATE_FILE_PATH, "utf-16le", (err, data) => {
+        if (!err) {
+          const appStateStr = require2("lz-string").decompressFromUTF16(data);
+          try {
+            const appState = JSON.parse(appStateStr);
+            win2.webContents.send(Messages.APP_STATE_UPDATED, appState);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        } else {
+          reject(err);
+        }
+      });
+    } else {
+      reject(new Error("No saved tabs found."));
     }
-  }) : o(new Error("No saved tabs found."));
-}), g = (e) => {
-  (async () => {
-    const { canceled: o, filePaths: s } = await f.showOpenDialog({ properties: ["openFile"] });
-    if (o || s.length === 0) return null;
-    const a = i.readFileSync(s[0], "utf-8");
-    return { path: s[0], content: a };
-  })().then((o) => {
-    e.webContents.send(c.OPEN_FILE, o == null ? void 0 : o.path, o == null ? void 0 : o.content);
   });
-}, L = (e) => {
-  I(e, async (t) => {
-    t ? w(e, t) : console.error("No active tab found to save.");
+};
+const openFile = (win2) => {
+  const openDialog = async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ["openFile"] });
+    if (canceled || filePaths.length === 0) return null;
+    const content = fs.readFileSync(filePaths[0], "utf-8");
+    return { path: filePaths[0], content };
+  };
+  openDialog().then((result) => {
+    win2.webContents.send(Messages.OPEN_FILE, result == null ? void 0 : result.path, result == null ? void 0 : result.content);
   });
-}, w = async (e, t) => {
-  const o = async () => {
-    const { canceled: a, filePath: l } = await f.showSaveDialog({});
-    return console.log(a, l), a || !l ? null : l;
-  }, s = t.path ?? await o();
-  if (s)
+};
+const saveActiveTab = (win2) => {
+  getActiveTab(win2, async (tab) => {
+    if (tab) {
+      saveTabToFile(win2, tab);
+    } else {
+      console.error("No active tab found to save.");
+    }
+  });
+};
+const saveTabToFile = async (win2, tab) => {
+  const saveDialog = async () => {
+    const { canceled, filePath: filePath2 } = await dialog.showSaveDialog({});
+    console.log(canceled, filePath2);
+    if (canceled || !filePath2) return null;
+    return filePath2;
+  };
+  const filePath = tab.path ?? await saveDialog();
+  if (filePath) {
     try {
-      return i.writeFileSync(s, t.content ?? "", "utf-8"), t.name = r.basename(s) || "New File", t.dirty = !1, t.path = s, e.webContents.send(c.TAB_UPDATED, {
-        ...t
-      }), !0;
-    } catch (a) {
-      return console.error("Failed to save tab:", a), !1;
+      fs.writeFileSync(filePath, tab.content ?? "", "utf-8");
+      tab.name = path.basename(filePath) || "New File";
+      tab.dirty = false;
+      tab.path = filePath;
+      win2.webContents.send(Messages.TAB_UPDATED, {
+        ...tab
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to save tab:", error);
+      return false;
     }
-  else
-    return !1;
+  } else {
+    return false;
+  }
 };
 export {
-  j as MAIN_DIST,
-  v as RENDERER_DIST,
-  A as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
