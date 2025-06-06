@@ -1,1 +1,68 @@
-"use strict";const t=require("electron");var n=(e=>(e.NEW_FILE="new-file",e.OPEN_FILE="open-file",e.SAVE_FILE="save-file",e.CLOSE_CURRENT_TAB="close-current-tab",e.GET_ACTIVE_TAB="get-active-tab",e.GET_APP_STATE="get-app-state",e.TAB_UPDATED="tab-updated",e.APP_STATE_UPDATED="app-state-updated",e))(n||{});const o={onNewFile:e=>{t.ipcRenderer.on(n.NEW_FILE,()=>{e()})},onOpenFile:e=>{t.ipcRenderer.on(n.OPEN_FILE,(r,T,E)=>{e(T,E)})},onCloseCurrentTab:e=>{t.ipcRenderer.on(n.CLOSE_CURRENT_TAB,()=>{e()})},onGetActiveTab:e=>{t.ipcRenderer.on(n.GET_ACTIVE_TAB,async()=>{const r=e();t.ipcRenderer.send(n.GET_ACTIVE_TAB,r)})},onGetAppState:e=>{t.ipcRenderer.on(n.GET_APP_STATE,async()=>{const r=e();t.ipcRenderer.send(n.GET_APP_STATE,r)})},onTabUpdated:e=>{t.ipcRenderer.on(n.TAB_UPDATED,(r,T)=>{e(T)})},onAppStateUpdated:e=>{t.ipcRenderer.on(n.APP_STATE_UPDATED,(r,T)=>{e(T)})},clearCallbacks:()=>{for(const e in n){const r=n[e];t.ipcRenderer.removeAllListeners(r)}}};t.contextBridge.exposeInMainWorld("electron",o);
+"use strict";
+const electron = require("electron");
+var Messages = /* @__PURE__ */ ((Messages2) => {
+  Messages2["NEW_FILE"] = "new-file";
+  Messages2["OPEN_FILE"] = "open-file";
+  Messages2["SAVE_FILE"] = "save-file";
+  Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
+  Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
+  Messages2["GET_APP_STATE"] = "get-app-state";
+  Messages2["TAB_UPDATED"] = "tab-updated";
+  Messages2["APP_STATE_UPDATED"] = "app-state-updated";
+  Messages2["ASK_SAVE_TAB"] = "ask-save-tab";
+  return Messages2;
+})(Messages || {});
+const exposedAPI = {
+  onNewFile: (callback) => {
+    electron.ipcRenderer.on(Messages.NEW_FILE, () => {
+      callback();
+    });
+  },
+  onOpenFile: (callback) => {
+    electron.ipcRenderer.on(Messages.OPEN_FILE, (_event, filePath, content) => {
+      callback(filePath, content);
+    });
+  },
+  onCloseCurrentTab: (callback) => {
+    electron.ipcRenderer.on(Messages.CLOSE_CURRENT_TAB, () => {
+      callback();
+    });
+  },
+  onGetActiveTab: (getter) => {
+    electron.ipcRenderer.on(Messages.GET_ACTIVE_TAB, async () => {
+      const activeTab = getter();
+      electron.ipcRenderer.send(Messages.GET_ACTIVE_TAB, activeTab);
+    });
+  },
+  onGetAppState: (getter) => {
+    electron.ipcRenderer.on(Messages.GET_APP_STATE, async () => {
+      const appState = getter();
+      electron.ipcRenderer.send(Messages.GET_APP_STATE, appState);
+    });
+  },
+  onTabUpdated: (callback) => {
+    electron.ipcRenderer.on(Messages.TAB_UPDATED, (_event, tab) => {
+      callback(tab);
+    });
+  },
+  onAppStateUpdated: (callback) => {
+    electron.ipcRenderer.on(Messages.APP_STATE_UPDATED, (_event, appState) => {
+      callback(appState);
+    });
+  },
+  askSaveTab: (tab) => {
+    electron.ipcRenderer.send(Messages.ASK_SAVE_TAB, tab);
+  },
+  listenNextAskSaveResult: (callback) => {
+    electron.ipcRenderer.once(Messages.ASK_SAVE_TAB, (_event, cancel) => {
+      callback(cancel);
+    });
+  },
+  clearCallbacks: () => {
+    for (const key in Messages) {
+      const message = Messages[key];
+      electron.ipcRenderer.removeAllListeners(message);
+    }
+  }
+};
+electron.contextBridge.exposeInMainWorld("electron", exposedAPI);

@@ -11,6 +11,8 @@ export interface IElectronAPI {
   onGetAppState: (callback: () => AppState) => void,
   onTabUpdated: (callback: (tab: Tab) => void) => void,
   onAppStateUpdated: (callback: (appState: AppState) => void) => void,
+  askSaveTab: (tab: Tab) => void,
+  listenNextAskSaveResult: (callback: (cancel: boolean) => void) => void,
   clearCallbacks: () => void,
 }
 
@@ -50,6 +52,14 @@ const exposedAPI: IElectronAPI = {
   onAppStateUpdated: (callback) => {
     ipcRenderer.on(Messages.APP_STATE_UPDATED, (_event, appState: AppState) => {
       callback(appState);
+    });
+  },
+  askSaveTab: (tab) => {
+    ipcRenderer.send(Messages.ASK_SAVE_TAB, tab);
+  },
+  listenNextAskSaveResult: (callback) => {
+    ipcRenderer.once(Messages.ASK_SAVE_TAB, (_event, cancel: boolean) => {
+      callback(cancel);
     });
   },
   clearCallbacks: () => {

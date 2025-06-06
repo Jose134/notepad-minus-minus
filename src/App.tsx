@@ -68,12 +68,27 @@ function App() {
   }
 
   const closeTab = (tabId: string) => {
-    const newTabs = appStateRef.current.tabs.filter(tab => tab.id !== tabId);
-    const leftTabIndex = appStateRef.current.tabs.findIndex(tab => tab.id === tabId) - 1;
-    const newActiveTabId = appStateRef.current.activeTabId === tabId
-      ? appStateRef.current.tabs[leftTabIndex]?.id || newTabs[0]?.id || null
-      : appStateRef.current.activeTabId;
-    setAppState(prev => ({ ...prev, tabs: newTabs, activeTabId: newActiveTabId }));
+    const close = () => {
+      const newTabs = appStateRef.current.tabs.filter(tab => tab.id !== tabId);
+      const leftTabIndex = appStateRef.current.tabs.findIndex(tab => tab.id === tabId) - 1;
+      const newActiveTabId = appStateRef.current.activeTabId === tabId
+        ? appStateRef.current.tabs[leftTabIndex]?.id || newTabs[0]?.id || null
+        : appStateRef.current.activeTabId;
+      setAppState(prev => ({ ...prev, tabs: newTabs, activeTabId: newActiveTabId }));
+    }
+
+    const tabToClose = appStateRef.current.tabs.find(tab => tab.id === tabId);
+    if (tabToClose?.dirty) {
+      window.electron.listenNextAskSaveResult((cancel) => {
+        if (cancel) return;
+        close();
+      });
+      window.electron.askSaveTab(tabToClose);
+    }
+    else {
+      close();
+    }
+    
   };
 
   const createNewTab = () => {

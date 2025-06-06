@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, dialog, ipcMain, Dialog } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -106,7 +106,7 @@ function createMenu(win: BrowserWindow) {
         {
           label: 'Save',
           accelerator: 'CommandOrControl+S',
-          click: () => { saveFile(win); }
+          click: () => { saveActiveTab(win); }
         },
         {
           label: 'Close Current Tab',
@@ -144,6 +144,40 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+ipcMain.on(Messages.ASK_SAVE_TAB, async (_event, tab: Tab) => {
+  enum DialogResponse {
+    SAVE = 0,
+    DONT_SAVE = 1,
+    CANCEL = 2
+  }
+
+  const showConfirmDialog = async () => {
+    const result = await dialog.showMessageBox({
+      type: 'info',
+      noLink: true,
+      buttons: ['Save', 'Don\'t Save', 'Cancel'],
+      title: 'Unsaved Changes',
+      message: `The tab "${tab.name}" has unsaved changes. Do you want to save it?`
+    })
+    
+    return result.response as DialogResponse; // 0 is the index of the "Save" button
+  }
+
+  if (win) {
+    const dialogResponse = await showConfirmDialog();
+    if (dialogResponse === DialogResponse.SAVE) {
+      const saved = await saveTabToFile(win, tab);
+
+      // Keep the tab open if failed to save (user closed save file dialog or FS error)
+      win.webContents.send(Messages.ASK_SAVE_TAB, !saved);
+    }
+    else {
+      // Keep the tab open if the user chose to cancel
+      win.webContents.send(Messages.ASK_SAVE_TAB, dialogResponse === DialogResponse.CANCEL);
+    }
+  }
+});
 
 const getAppState = (win: BrowserWindow, callback: (tabs: AppState) => void) => {
   ipcMain.once(Messages.GET_APP_STATE, (_event, appState: AppState) => {
@@ -211,29 +245,42 @@ const openFile = (win: BrowserWindow) => {
   });
 }
 
-const saveFile = (win: BrowserWindow) => {
+const saveActiveTab = (win: BrowserWindow) => {
+  getActiveTab(win, async (tab: Tab | null) => {
+    if (tab) {
+      saveTabToFile(win, tab);
+    }
+    else {
+      console.error('No active tab found to save.');
+    }
+  });
+}
+
+const saveTabToFile = async (win: BrowserWindow, tab: Tab) => {
   const saveDialog = async () => {
     const { canceled, filePath } = await dialog.showSaveDialog({});
     console.log(canceled, filePath);
     if (canceled || !filePath) return null;
     return filePath;
   };
-
-  getActiveTab(win, async (tab: Tab | null) => {
-    if (tab) {
-      const filePath = tab.path ?? await saveDialog();
-      if (filePath) {
-        fs.writeFileSync(filePath, tab.content ?? '', 'utf-8');
-
-        tab.name = path.basename(filePath) || 'New File';
-        tab.dirty = false;
-        tab.path = filePath;
-        win.webContents.send(Messages.TAB_UPDATED, {
-          ...tab,
-        });
-      }      
-    } else {
-      console.error('No active tab found');
+  const filePath = tab.path ?? await saveDialog();
+  if (filePath) {
+    try {
+      fs.writeFileSync(filePath, tab.content ?? '', 'utf-8');
+      
+      tab.name = path.basename(filePath) || 'New File';
+      tab.dirty = false;
+      tab.path = filePath;
+      win.webContents.send(Messages.TAB_UPDATED, {
+        ...tab,
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to save tab:', error);
+      return false;
     }
-  });
+  }
+  else {
+    return false;
+  }
 }

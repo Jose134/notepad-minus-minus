@@ -9,6 +9,8 @@ enum Messages {
 
   TAB_UPDATED = 'tab-updated',
   APP_STATE_UPDATED = 'app-state-updated',
+
+  ASK_SAVE_TAB = 'ask-save-tab',
 }
 
 export default Messages;
