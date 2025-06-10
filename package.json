@@ -1,5 +1,7 @@
 {
   "name": "notepad-minus-minus",
+  "description": "A simple notepad application",
+  "author": "Jose134",
   "private": true,
   "version": "0.0.0",
   "type": "module",
