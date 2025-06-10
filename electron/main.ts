@@ -113,6 +113,17 @@ function createMenu(win: BrowserWindow) {
           click: () => { win.webContents.send(Messages.CLOSE_CURRENT_TAB); }
         },
         {
+          type: 'separator'
+        },
+        {
+          label: 'Settings',
+          accelerator: 'CommandOrControl+,',
+          click: () => { win.webContents.send (Messages.OPEN_SETTINGS); }
+        },
+        {
+          type: 'separator'
+        },
+        {
           label: 'Exit',
           accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
           click: () => { app.quit(); }

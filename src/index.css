@@ -21,6 +21,17 @@
   -ms-user-select: none;
 }
 
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+body {
+  margin: 0;
+  min-width: 100vw;
+  min-height: 100vh;
+}
+
 a {
   font-weight: 500;
   color: var(--accent-color);
@@ -29,14 +40,6 @@ a {
 a:hover {
   color: var(--accent-color);
   cursor: pointer;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
@@ -58,7 +61,16 @@ button {
 button:hover {
   border-color: var(--accent-color);
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+
+.btn-fixed {
+  width: 200px;
+}
+
+.btn-accent {
+  background-color: var(--accent-color);
+  color: #fff;
+  border: none;
+}
+.btn-accent:hover {
+  background-color: rgba(78, 156, 255, 0.8);
 }

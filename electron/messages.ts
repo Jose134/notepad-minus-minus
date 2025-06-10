@@ -4,6 +4,8 @@ enum Messages {
   SAVE_FILE = 'save-file',
   CLOSE_CURRENT_TAB = 'close-current-tab',
 
+  OPEN_SETTINGS = 'open-settings',
+
   GET_ACTIVE_TAB = 'get-active-tab',
   GET_APP_STATE = 'get-app-state',
 

@@ -5,6 +5,7 @@ var Messages = /* @__PURE__ */ ((Messages2) => {
   Messages2["OPEN_FILE"] = "open-file";
   Messages2["SAVE_FILE"] = "save-file";
   Messages2["CLOSE_CURRENT_TAB"] = "close-current-tab";
+  Messages2["OPEN_SETTINGS"] = "open-settings";
   Messages2["GET_ACTIVE_TAB"] = "get-active-tab";
   Messages2["GET_APP_STATE"] = "get-app-state";
   Messages2["TAB_UPDATED"] = "tab-updated";
@@ -25,6 +26,11 @@ const exposedAPI = {
   },
   onCloseCurrentTab: (callback) => {
     electron.ipcRenderer.on(Messages.CLOSE_CURRENT_TAB, () => {
+      callback();
+    });
+  },
+  onOpenSettings: (callback) => {
+    electron.ipcRenderer.on(Messages.OPEN_SETTINGS, () => {
       callback();
     });
   },

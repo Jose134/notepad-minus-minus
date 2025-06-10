@@ -7,6 +7,7 @@ export interface IElectronAPI {
   onNewFile: (callback: () => void) => void,
   onOpenFile: (callback: (filePath: string, content: string) => void) => void,
   onCloseCurrentTab: (callback: () => void) => void,
+  onOpenSettings: (callback: () => void) => void,
   onGetActiveTab: (callback: () => Tab | null) => void,
   onGetAppState: (callback: () => AppState) => void,
   onTabUpdated: (callback: (tab: Tab) => void) => void,
@@ -29,6 +30,11 @@ const exposedAPI: IElectronAPI = {
   },
   onCloseCurrentTab: (callback) => {
     ipcRenderer.on(Messages.CLOSE_CURRENT_TAB, () => {
+      callback();
+    });
+  },
+  onOpenSettings: (callback) => {
+    ipcRenderer.on(Messages.OPEN_SETTINGS, () => {
       callback();
     });
   },

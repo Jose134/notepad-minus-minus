@@ -5,10 +5,19 @@ import WelcomeScreen from './components/WelcomeScreen'
 import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import AppState from './models/AppState'
+import SettingsScreen from './components/SettingsScreen'
+import Settings from './models/Settings'
 
 function App() {
   const [appState, setAppState] = useState<AppState>({ tabs: [], activeTabId: null });
   const appStateRef = useRef(appState);
+  const [settingsOpened, setSettingsOpened] = useState(false);
+
+  const [settings, setSettings] = useState({
+    fontSize: 16,
+    lineNumbers: false,
+    enableMinimap: false,
+  } as Settings);
 
   useEffect(() => {
     appStateRef.current = appState;
@@ -36,6 +45,10 @@ function App() {
         closeTab(appStateRef.current.activeTabId);
       }
     })
+
+    window.electron.onOpenSettings(() => {
+      setSettingsOpened(true);
+    });
 
     window.electron.onGetActiveTab(() => {
       return appStateRef.current.tabs.find(tab => tab.id === appStateRef.current.activeTabId) ?? null;
@@ -115,6 +128,19 @@ function App() {
     setAppState(prev => ({ ...prev, tabs: newTabs }));
   }
 
+  if (settingsOpened) {
+    return (
+      <SettingsScreen
+        currentSettings={settings}
+        onClose={() => setSettingsOpened(false)}
+        onSave={(newSettings) => { 
+          setSettings({...newSettings});
+          setSettingsOpened(false);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <TabBar
@@ -134,8 +160,9 @@ function App() {
               onChange={onEditorChange}
               language="plaintext"
               options={{
-                minimap: { enabled: false },
-                fontSize: 16,
+                minimap: { enabled: settings.enableMinimap },
+                fontSize: settings.fontSize,
+                lineNumbers: settings.lineNumbers ? 'on' : 'off',
               }}
               value={
                 appState.tabs.find(tab => tab.id === appState.activeTabId)?.content || ''
