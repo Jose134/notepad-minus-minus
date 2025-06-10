@@ -111,6 +111,10 @@ function App() {
     setAppState({ ...appState, tabs: newTabs });
   }
 
+  const handleTabReorder = (newTabs: typeof appState.tabs) => {
+    setAppState(prev => ({ ...prev, tabs: newTabs }));
+  }
+
   return (
     <>
       <TabBar
@@ -119,6 +123,7 @@ function App() {
         onTabSelect={selectTab}
         onNewTab={createNewTab}
         onTabClose={closeTab}
+        onTabReorder={handleTabReorder}
       />
       <div className="editor-container">
         {
